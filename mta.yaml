@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: AppRouterManager
+version: 0.0.1
+modules:
+- name: AppRouterManager-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: AppRouterManager-destination-service
+    parameters:
+      content-target: true
+  - name: AppRouterManager_html_repo_host
+    parameters:
+      service-key:
+        name: AppRouterManager_html_repo_host-key
+  - name: uaa_AppRouterManager
+    parameters:
+      service-key:
+        name: uaa_AppRouterManager-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: salesordermanage_AppRouterManager_html_repo_host
+          ServiceInstanceName: AppRouterManager-html5-app-host-service
+          ServiceKeyName: AppRouterManager_html_repo_host-key
+          sap.cloud.service: salesordermanage
+        - Authentication: OAuth2UserTokenExchange
+          Name: salesordermanage_uaa_AppRouterManager
+          ServiceInstanceName: AppRouterManager-xsuaa-service
+          ServiceKeyName: uaa_AppRouterManager-key
+          sap.cloud.service: salesordermanage
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: AppRouterManager-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: AppRouterManager_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - nsordendeventa.zip
+      name: nsordendeventa
+      target-path: resources/
+- name: nsordendeventa
+  type: html5
+  path: ordendeventa
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: AppRouterManager-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: AppRouterManager-destination-service
+    service-plan: lite
+- name: AppRouterManager_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: AppRouterManager-html5-app-host-service
+    service-plan: app-host
+- name: uaa_AppRouterManager
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: AppRouterManager-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
